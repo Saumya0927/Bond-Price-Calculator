@@ -12,21 +12,6 @@ This C++ project implements a sophisticated Bond Price Calculator that incorpora
 - **Support for Various Bond Types**: Handles both coupon-bearing and zero-coupon bonds.
 - **Robust Error Handling**: Includes input validation and edge case management.
 
-## Requirements
-
-- C++17 compatible compiler
-- Standard C++ libraries
-
-## Usage
-
-1. Compile the `bond_price_calculator.cpp` file:
-2. Run the executable
-3. Follow the prompts to input bond parameters:
-- Face value
-- Coupon rate
-- Years to maturity
-- Coupons per year
-- Number of Monte Carlo simulations
 
 ## Sample Output
 Enter bond face value: 1000
@@ -37,9 +22,13 @@ Enter yield to maturity (as a decimal): 0.05
 Enter number of Monte Carlo simulations: 10000
 
 Results:
+
 Static Bond Price: $1000.00
+
 Monte Carlo Bond Price: $1003.28 plus or minus $77.60
+
 Duration: 7.99 years
+
 Convexity: 77.43
 
 ## Future Enhancements
