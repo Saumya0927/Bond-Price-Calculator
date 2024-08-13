@@ -7,20 +7,25 @@
 #include <algorithm>
 #include <numeric>
 
-
-// YieldCurve class
+// YieldCurve class represents a yield curve and provides interpolation functionality
 class YieldCurve {
 private:
     std::vector<double> maturities;
     std::vector<double> rates;
 
 public:
+    // Constructor for YieldCurve, initializes with given maturities and rates
     YieldCurve(const std::vector<double>& maturities, const std::vector<double>& rates)
         : maturities(maturities), rates(rates) {
         if (maturities.size() != rates.size()) {
             throw std::invalid_argument("Maturities and rates must have the same size");
         }
+        // Ensure maturities are sorted in ascending order
+        if (!std::is_sorted(maturities.begin(), maturities.end())) {
+            throw std::invalid_argument("Maturities must be in ascending order");
+        }
     }
+
     // Interpolate the yield for a given maturity
     double interpolate(double t) const {
         auto it = std::lower_bound(maturities.begin(), maturities.end(), t);
@@ -32,12 +37,13 @@ public:
         double t1 = maturities[index];
         double r0 = rates[index - 1];
         double r1 = rates[index];
-        // Linear Interpolation
+
+        // Linear interpolation
         return r0 + (r1 - r0) * (t - t0) / (t1 - t0);
     }
 };
 
-
+// BondPriceCalculator class handles bond price calculations and Monte Carlo simulations
 class BondPriceCalculator {
 private:
     double face_value;
@@ -52,6 +58,7 @@ private:
     std::normal_distribution<> dist;
 
 public:
+    // Constructor initializes the bond parameters and random number generator
     BondPriceCalculator(double fv, double cr, int ytm, int cpy, 
                         const YieldCurve& yc, int sims)
         : face_value(fv), coupon_rate(cr), years_to_maturity(ytm), coupons_per_year(cpy),
@@ -61,7 +68,7 @@ public:
         is_zero_coupon = (coupon_rate == 0.0 && coupons_per_year == 1);
     }
 
-
+    // Validate input parameters
     void validateInputs() {
         if (face_value <= 0) throw std::invalid_argument("Face value must be positive");
         if (coupon_rate < 0) throw std::invalid_argument("Coupon rate cannot be negative");
@@ -70,7 +77,7 @@ public:
         if (num_simulations <= 0) throw std::invalid_argument("Number of simulations must be positive");
     }
 
-    // Static price
+    // Calculate the static price of the bond using the initial yield curve
     double calculateStaticPrice() {
         if (is_zero_coupon) {
             double ytm = yield_curve.interpolate(years_to_maturity);
@@ -92,7 +99,7 @@ public:
         return price;
     }
 
-    // Monte Carlo simulation
+    // Perform Monte Carlo simulation to estimate bond price and its standard deviation
     std::pair<double, double> calculateMonteCarlo() {
         std::vector<double> prices;
         prices.reserve(num_simulations);
@@ -112,19 +119,19 @@ public:
         return {mean, std::sqrt(variance)};
     }
 
-    // Shifted yield curve for MC simulation
+    // Generate a shifted yield curve for Monte Carlo simulation
     YieldCurve shiftYieldCurve() {
         std::vector<double> maturities, rates;
         for (int i = 1; i <= years_to_maturity; ++i) {
             maturities.push_back(i);
             double base_rate = yield_curve.interpolate(i);
             double shifted_rate = base_rate + dist(gen);
-            rates.push_back(std::max(0.0, shifted_rate));  // Non-negative rates
+            rates.push_back(std::max(0.0, shifted_rate));  // Ensure non-negative rates
         }
         return YieldCurve(maturities, rates);
     }
 
-    // Calculate bond price with a given yield
+    // Calculate bond price for a given yield curve
     double calculatePrice(const YieldCurve& curve) {
         if (is_zero_coupon) {
             double ytm = curve.interpolate(years_to_maturity);
@@ -146,12 +153,12 @@ public:
         return price;
     }
 
-    // Duration and concavity need to be changes for yield curves that are not flat
-    // This is for further improvement
+    // TODO: Implement Duration and Convexity calculations for non-flat yield curves
 };
 
 int main() {
     try {
+        // Input bond parameters from user
         double face_value, coupon_rate;
         int years_to_maturity, coupons_per_year, num_simulations;
 
@@ -166,21 +173,23 @@ int main() {
         std::cout << "Enter number of Monte Carlo simulations: ";
         std::cin >> num_simulations;
 
-        // Simple yield curve for demonstration
+        // Define initial yield curve
         std::vector<double> maturities = {1, 2, 3, 5, 10, 30};
         std::vector<double> rates = {0.01, 0.015, 0.02, 0.025, 0.03, 0.035};
         YieldCurve yield_curve(maturities, rates);
 
-        BondPriceCalculator calculator(face_value, coupon_rate, years_to_maturity, 
-                                       coupons_per_year, yield_curve, num_simulations);
+        // Create BondPriceCalculator instance
+        BondPriceCalculator calculator(face_value, coupon_rate, years_to_maturity, coupons_per_year, yield_curve, num_simulations);
 
+        // Calculate static price and perform Monte Carlo simulation
         double static_price = calculator.calculateStaticPrice();
         auto [mc_price, mc_std_dev] = calculator.calculateMonteCarlo();
 
+        // Display results
         std::cout << std::fixed << std::setprecision(2);
         std::cout << "\nResults:\n";
         std::cout << "Static Bond Price: $" << static_price << std::endl;
-        std::cout << "Monte Carlo Bond Price: $" << mc_price << " ± $" << mc_std_dev << std::endl;
+        std::cout << "Monte Carlo Bond Price: $" << mc_price << " +/- $" << mc_std_dev << std::endl;
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
